@@ -414,7 +414,6 @@ void stage3_boss_spellbg(Boss *b, int time) {
 	glBlendEquation(GL_FUNC_SUBTRACT);
 	glColor4f(1,1,1,0.4);
 	fill_screen(cos(time) * 0.02, time / 30.0, 1, "stage3/wspellclouds");
-	
 	glBlendEquation(GL_FUNC_ADD);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glColor4f(1,1,1,1);
