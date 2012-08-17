@@ -14,6 +14,7 @@ set(SRCs
 	taiseigl.c
 	random.c
 	config.c
+	gamepad.c
 	stage.c
 	replay.c
 	global.c
@@ -83,6 +84,10 @@ endif()
 
 if(WERROR)
 	add_definitions(-Werror)
+endif()
+
+if(FATALERRS)
+	add_definitions(-Wfatal-errors)
 endif()
 
 set(LIBs ${LIBs}

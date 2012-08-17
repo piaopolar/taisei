@@ -11,8 +11,7 @@
 #include "projectile.h"
 #include "global.h"
 #include "plrmodes.h"
-#include "menu/gameovermenu.h"
-#include "menu/ingamemenu.h"
+#include "stage.h"
 
 void init_player(Player* plr) {
 	memset(plr, 0, sizeof(Player));
@@ -218,11 +217,8 @@ void player_realdeath(Player *plr) {
 		return;
 	}
 	
-	if(plr->lifes-- == 0 && global.replaymode != REPLAY_PLAY) {
-		MenuData m;
-		create_gameover_menu(&m);
-		ingame_menu_loop(&m);
-	}
+	if(plr->lifes-- == 0 && global.replaymode != REPLAY_PLAY)
+		stage_gameover();
 }
 
 void player_death(Player *plr) {
@@ -299,13 +295,47 @@ void player_event(Player* plr, int type, int key) {
 			}
 			
 			break;
+		
+		case EV_AXIS_LR:
+			plr->axis_lr = key;
+			break;
+			
+		case EV_AXIS_UD:
+			plr->axis_ud = key;
+			break;
 	}
 }
 
-void player_applymovement(Player* plr) {
+// free-axis movement
+int player_applymovement_gamepad(Player *plr) {
+	if(!plr->axis_lr && !plr->axis_ud)
+		return False;
+	
+	complex direction = (plr->axis_lr + plr->axis_ud*I) / (double)GAMEPAD_AXIS_RANGE;
+	if(cabs(direction) > 1)
+		direction /= cabs(direction);
+	
+	double real = creal(direction);
+	double imag = cimag(direction);
+	int sr = SIGN(real);
+	int si = SIGN(imag);
+	
+	player_setmoveflag(plr, KEY_UP,		si == -1);
+	player_setmoveflag(plr, KEY_DOWN,	si ==  1);
+	player_setmoveflag(plr, KEY_LEFT,	sr == -1);
+	player_setmoveflag(plr, KEY_RIGHT,	sr ==  1);
+	
+	if(direction)
+		player_move(&global.plr, direction);
+	
+	return True;
+}
+
+void player_applymovement(Player *plr) {
 	if(plr->deathtime < -1)
 		return;
 	
+	int gamepad = player_applymovement_gamepad(plr);
 	plr->moving = False;
 	
 	int up		=	plr->moveflags & MOVEFLAG_UP,
@@ -319,7 +349,10 @@ void player_applymovement(Player* plr) {
 	} else if(right && !left) {
 		plr->moving = True;
 		plr->dir = 0;
-	}	
+	}
+	
+	if(gamepad)
+		return;
 	
 	complex direction = 0;
 	
@@ -327,26 +360,28 @@ void player_applymovement(Player* plr) {
 	if(down)	direction += 1I;
 	if(left)	direction -= 1;
 	if(right)	direction += 1;
-		
+	
 	if(cabs(direction))
 		direction /= cabs(direction);
 	
 	if(direction)
 		player_move(&global.plr, direction);
-	
-	// workaround
-	if(global.replaymode == REPLAY_RECORD && !global.dialog) {
-		Uint8 *keys = SDL_GetKeyState(NULL);
+}
+
+void player_input_workaround(Player *plr) {
+	if(!global.dialog) {
+		int shot  = gamekeypressed(KEY_SHOT);
+		int focus = gamekeypressed(KEY_FOCUS);
 		
-		if(!keys[tconfig.intval[KEY_SHOT]] && plr->fire) {
+		if(!shot && plr->fire) {
 			player_event(plr, EV_RELEASE, KEY_SHOT);
 			replay_event(&global.replay, EV_RELEASE, KEY_SHOT);
-		} else if(keys[tconfig.intval[KEY_SHOT]] && !plr->fire) {
+		} else if(shot && !plr->fire) {
 			player_event(plr, EV_PRESS, KEY_SHOT);
 			replay_event(&global.replay, EV_PRESS, KEY_SHOT);
 		}
 		
-		if(!keys[tconfig.intval[KEY_FOCUS]] && plr->focus > 0) {
+		if(!focus && plr->focus > 0) {
 			player_event(plr, EV_RELEASE, KEY_FOCUS);
 			replay_event(&global.replay, EV_RELEASE, KEY_FOCUS);
 		}

@@ -10,7 +10,7 @@
 
 #include <complex.h>
 #include "enemy.h"
-
+#include "gamepad.h"
 #include "resource/animation.h"
 
 enum {
@@ -65,6 +65,9 @@ typedef struct {
 	int movetime;
 	int prevmove;
 	int prevmovetime;
+	
+	int axis_ud;
+	int axis_lr;
 } Player;
 
 void init_player(Player*);
@@ -84,5 +87,6 @@ void player_graze(Player*, complex, int);
 void player_setmoveflag(Player* plr, int key, int mode);
 void player_event(Player* plr,int type, int key);
 void player_applymovement(Player* plr);
+void player_input_workaround(Player *plr);
 
 #endif

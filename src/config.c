@@ -37,6 +37,28 @@ ConfigEntry configdefs[] = {
 	{CFGT_INT,					VID_HEIGHT,				"vid_height"},
 	{CFGT_STRING,				PLAYERNAME,				"playername"},
 	
+	{CFGT_INT,					GAMEPAD_ENABLED,		"gamepad_enabled"},
+	{CFGT_INT,					GAMEPAD_DEVICE,			"gamepad_device"},
+	{CFGT_INT,					GAMEPAD_AXIS_UD,		"gamepad_axis_ud"},
+	{CFGT_INT,					GAMEPAD_AXIS_LR,		"gamepad_axis_lr"},
+	{CFGT_FLOAT,				GAMEPAD_AXIS_DEADZONE,	"gamepad_axis_deadzone"},
+	{CFGT_INT,					GAMEPAD_AXIS_FREE,		"gamepad_axis_free"},
+	{CFGT_FLOAT,				GAMEPAD_AXIS_UD_SENS,	"gamepad_axis_ud_free_sensitivity"},
+	{CFGT_FLOAT,				GAMEPAD_AXIS_LR_SENS,	"gamepad_axis_lr_free_sensitivity"},
+	
+	// gamepad controls
+	{CFGT_INT,					GP_UP,					"gamepad_key_up"},
+	{CFGT_INT,					GP_DOWN,				"gamepad_key_down"},
+	{CFGT_INT,					GP_LEFT,				"gamepad_key_left"},
+	{CFGT_INT,					GP_RIGHT,				"gamepad_key_right"},
+	
+	{CFGT_INT,					GP_FOCUS,				"gamepad_key_focus"},
+	{CFGT_INT,					GP_SHOT,				"gamepad_key_shot"},
+	{CFGT_INT,					GP_BOMB,				"gamepad_key_bomb"},
+	
+	{CFGT_INT,					GP_SKIP,				"gamepad_key_skip"},
+	{CFGT_INT,					GP_PAUSE,				"gamepad_key_pause"},
+	
 	{0, 0, 0}
 };
 
@@ -46,8 +68,16 @@ ConfigEntry* config_findentry(char *name) {
 	return NULL;
 }
 
+ConfigEntry* config_findentry_byid(int id) {
+	ConfigEntry *e = configdefs;
+	do if(id == e->key) return e; while((++e)->name);
+	return NULL;
+}
+
 void config_preset(void) {
 	memset(tconfig.strval, 0, sizeof(tconfig.strval));
+	memset(tconfig.intval, 0, sizeof(tconfig.intval));
+	memset(tconfig.fltval, 0, sizeof(tconfig.fltval));
 	
 	tconfig.intval[KEY_UP] = SDLK_UP;
 	tconfig.intval[KEY_DOWN] = SDLK_DOWN;
@@ -78,6 +108,21 @@ void config_preset(void) {
 	char *name = "Player";
 	tconfig.strval[PLAYERNAME] = malloc(strlen(name)+1);
 	strcpy(tconfig.strval[PLAYERNAME], name);
+	
+	int o; for(o = CONFIG_GPKEY_FIRST; o <= CONFIG_GPKEY_LAST; ++o)
+		tconfig.intval[o] = -1;
+	
+	tconfig.intval[GAMEPAD_AXIS_LR] = 0;
+	tconfig.intval[GAMEPAD_AXIS_UD] = 1;
+	
+	tconfig.fltval[GAMEPAD_AXIS_UD_SENS] = 1.0;
+	tconfig.fltval[GAMEPAD_AXIS_LR_SENS] = 1.0;
+	
+	tconfig.intval[GP_FOCUS] = 0;
+	tconfig.intval[GP_SHOT]  = 1;
+	tconfig.intval[GP_BOMB]  = 2;
+	tconfig.intval[GP_SKIP]  = 3;
+	tconfig.intval[GP_PAUSE] = 4;
 }
 
 int config_sym2key(int sym) {
@@ -86,6 +131,41 @@ int config_sym2key(int sym) {
 		if(sym == tconfig.intval[i])
 			return i;
 	return -1;
+}
+
+int config_button2gpkey(int btn) {
+	int i;
+	for(i = CONFIG_GPKEY_FIRST; i <= CONFIG_GPKEY_LAST; ++i)
+		if(btn == tconfig.intval[i])
+			return i;
+	return -1;
+}
+
+/*
+ *	The following function is no less ugly than it's name...
+ *	The reason for this crap: config_button2gpkey maps the button ID to the first gamepad control option that's bound to the value of the button, similar to config_sym2key.
+ *	However, we need that in the KEY_* format to use in stuff like player and replay events.
+ *	So we have to transform them, somehow.
+ *	Since I don't think relying on the enum's layout is a better idea, here comes a dumb switch.
+ */
+ 
+int config_gpkey2key(int gpkey) {
+	switch(gpkey) {
+		case GP_UP		:	return KEY_UP		;break;
+		case GP_DOWN	:	return KEY_DOWN		;break;
+		case GP_LEFT	:	return KEY_LEFT		;break;
+		case GP_RIGHT	:	return KEY_RIGHT	;break;
+		case GP_SHOT	:	return KEY_SHOT		;break;
+		case GP_FOCUS	:	return KEY_FOCUS	;break;
+		case GP_BOMB	:	return KEY_BOMB		;break;
+		case GP_SKIP	:	return KEY_SKIP		;break;
+	}
+	
+	return -1;
+}
+
+int config_button2key(int btn) {
+	return config_gpkey2key(config_button2gpkey(btn));
 }
 
 FILE* config_open(char *filename, char *mode) {
@@ -116,12 +196,20 @@ char* config_strval_p(ConfigEntry *e) {
 	return tconfig.strval[e->key];
 }
 
+float config_fltval_p(ConfigEntry *e) {
+	return tconfig.fltval[e->key];
+}
+
 int config_intval(char *key) {
 	return config_intval_p(config_findentry(key));
 }
 
 char* config_strval(char *key) {
 	return config_strval_p(config_findentry(key));
+}
+
+float config_fltval(char *key) {
+	return config_fltval_p(config_findentry(key));
 }
 
 void config_save(char *filename) {
@@ -145,6 +233,9 @@ void config_save(char *filename) {
 		case CFGT_STRING:
 			fprintf(out, "%s = %s\n", e->name, config_strval_p(e));
 			break;
+		
+		case CFGT_FLOAT:
+			fprintf(out, "%s = %f\n", e->name, config_fltval_p(e));
 	} while((++e)->name);
 	
 	fclose(out);
@@ -153,7 +244,8 @@ void config_save(char *filename) {
 
 #define SYNTAXERROR { warnx("config_load(): syntax error on line %i, aborted! [%s:%i]\n", line, __FILE__, __LINE__); goto end; }
 #define BUFFERERROR { warnx("config_load(): string exceed the limit of %i, aborted! [%s:%i]", CONFIG_LOAD_BUFSIZE, __FILE__, __LINE__); goto end; }
-#define INTOF(s) ((int)strtol(s, NULL, 10))
+#define INTOF(s)   ((int)strtol(s, NULL, 10))
+#define FLOATOF(s) ((float)strtod(s, NULL))
 
 void config_set(char *key, char *val) {
 	ConfigEntry *e = config_findentry(key);
@@ -175,10 +267,15 @@ void config_set(char *key, char *val) {
 		case CFGT_STRING:
 			stralloc(&(tconfig.strval[e->key]), val);
 			break;
+		
+		case CFGT_FLOAT:
+			tconfig.fltval[e->key] = FLOATOF(val);
+			break;
 	}
 }
 
 #undef INTOF
+#undef FLOATOF
 
 void config_load(char *filename) {
 	FILE *in = config_open(filename, "r");

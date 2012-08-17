@@ -15,6 +15,7 @@
 #include "config.h"
 #include "player.h"
 #include "menu/ingamemenu.h"
+#include "menu/gameovermenu.h"
 #include "taisei_err.h"
 
 StageInfo stages[] = {	
@@ -52,10 +53,16 @@ void stage_start(void) {
 	global.plr.deathtime = -1;
 }
 
-void stage_ingamemenu(void) {
+void stage_pause(void) {
 	MenuData menu;
 	create_ingame_menu(&menu);
 	ingame_menu_loop(&menu);
+}
+
+void stage_gameover(void) {
+	MenuData m;
+	create_gameover_menu(&m);
+	ingame_menu_loop(&m);
 }
 
 void stage_input_event(EventType type, int key, void *arg) {
@@ -68,8 +75,9 @@ void stage_input_event(EventType type, int key, void *arg) {
 				player_event(&global.plr, EV_PRESS, key);
 				replay_event(&global.replay, EV_PRESS, key);
 				
-				if(key == KEY_SKIP && global.dialog)
+				if(key == KEY_SKIP && global.dialog) {
 					global.dialog->skip = True;
+				}
 			}
 			break;
 		
@@ -82,7 +90,17 @@ void stage_input_event(EventType type, int key, void *arg) {
 			break;
 		
 		case E_Pause:
-			stage_ingamemenu();
+			stage_pause();
+			break;
+		
+		case E_PlrAxisLR:
+			player_event(&global.plr, EV_AXIS_LR, key);
+			replay_event(&global.replay, EV_AXIS_LR, key);
+			break;
+		
+		case E_PlrAxisUD:
+			player_event(&global.plr, EV_AXIS_UD, key);
+			replay_event(&global.replay, EV_AXIS_UD, key);
 			break;
 		
 		default: break;
@@ -91,7 +109,7 @@ void stage_input_event(EventType type, int key, void *arg) {
 
 void stage_replay_event(EventType type, int state, void *arg) {
 	if(type == E_Pause)
-		stage_ingamemenu();
+		stage_pause();
 }
 
 void replay_input(void) {
@@ -130,16 +148,13 @@ void stage_input(void) {
 	handle_events(stage_input_event, EF_Game, NULL);
 	
 	// workaround
-	if(global.dialog && global.dialog->skip) {
-		Uint8 *keys = SDL_GetKeyState(NULL);
-			
-		if(!keys[tconfig.intval[KEY_SKIP]]) {
-			global.dialog->skip = False;
-			replay_event(&global.replay, EV_RELEASE, KEY_SKIP);
-		}
+	if(global.dialog && global.dialog->skip && !gamekeypressed(KEY_SKIP)) {
+		global.dialog->skip = False;
+		replay_event(&global.replay, EV_RELEASE, KEY_SKIP);
 	}
 	
 	player_applymovement(&global.plr);
+	player_input_workaround(&global.plr);
 }
 
 void draw_hud(void) {
@@ -485,6 +500,7 @@ void stage_loop(StageInfo* info, StageRule start, StageRule end, StageRule draw,
 	
 	player_set_power(&global.plr, power);
 	global.plr.movetime = global.plr.prevmove = global.plr.prevmovetime = 0;
+	global.plr.axis_lr = global.plr.axis_ud = 0;
 	
 	start();
 	
