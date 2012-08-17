@@ -363,7 +363,7 @@ void cirno_crystal_blizzard(Boss *c, int time) {
 		GO_TO(c, VIEWPORT_W/2.0+300I, 0.1);
 		return;
 	}
-	
+	//return;
 	FROM_TO(60, 360, 10) {
 		int i, cnt = 14 + global.diff * 3;
 		for(i = 0; i < cnt; ++i) {

@@ -331,7 +331,7 @@ void GrowFade(Projectile *p, int t) {
 	glTranslatef(creal(p->pos), cimag(p->pos), 0);
 	glRotatef(p->angle*180/M_PI+90, 0, 0, 1);
 	
-	float s = t/p->args[0]*(1+p->args[1]);
+	float s = t/p->args[0]*(1 + (creal(p->args[2])? p->args[2] : p->args[1]));
 	if(s != 1)
 		glScalef(s, s, 1);
 	
@@ -344,7 +344,7 @@ void GrowFade(Projectile *p, int t) {
 	
 	glColor4f(1,1,1,1);
 	glPopMatrix();
-}		
+}
 
 void Fade(Projectile *p, int t) {
 	if(t/creal(p->args[0]) != 0)
