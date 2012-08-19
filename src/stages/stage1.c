@@ -407,7 +407,7 @@ Boss *create_cirno(void) {
 	
 	// extra spell test
 	//boss_add_attack(cirno, AT_Spellcard, "Doom Sign ~ Icicle Fall", 35, 40000, cirno_icicle_fall, cirno_pfreeze_bg);
-	boss_add_attack(cirno, AT_ExtraSpell, "Frost Sign ~ Crystal Blizzard", 10, 40000, cirno_crystal_blizzard, cirno_pfreeze_bg);
+	boss_add_attack(cirno, AT_ExtraSpell, "Frost Sign ~ Crystal Blizzard", 60, 40000, cirno_crystal_blizzard, cirno_pfreeze_bg);
 	/*
 	boss_add_attack(cirno, AT_Normal, "Iceplosion 0", 20, 20000, cirno_iceplosion0, NULL);
 	boss_add_attack(cirno, AT_Spellcard, "Freeze Sign ~ Crystal Rain", 28, 28000, cirno_crystal_rain, cirno_pfreeze_bg);
@@ -602,7 +602,7 @@ int stage1_tritoss(Enemy *e, int t) {
 		int n = 3+global.diff/2;
 		
 		for(i = 0; i < n; i++)
-			create_projectile2c("thickrice", e->pos, rgb(0.2, 0.4, 0.8), asymptotic, 2*cexp(I*a+2I*M_PI/n*i), 3);		
+			create_projectile2c("thickrice", e->pos, rgb(0.2, 0.4, 0.8), asymptotic, 2*cexp(I*a+2I*M_PI/n*i), 3);
 	}
 	
 	FROM_TO(480, 800, 300) {
