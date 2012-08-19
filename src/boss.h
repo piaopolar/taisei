@@ -23,6 +23,11 @@ typedef enum AttackType {
 	AT_ExtraSpell
 } AttackType;
 
+enum {
+	FINISH_NOPE,
+	FINISH_WIN,
+	FINISH_FAIL
+};
 
 typedef struct Attack {
 	char *name;
@@ -33,7 +38,8 @@ typedef struct Attack {
 	
 	int timeout;
 	int dmglimit;
-	int failed;
+	int finished;
+	int endtime;
 	
 	BossRule rule;
 	BossRule draw_rule;

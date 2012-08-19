@@ -247,3 +247,15 @@ void stralloc(char **dest, char *src) {
 int gamekeypressed(int key) {
 	return SDL_GetKeyState(NULL)[tconfig.intval[key]] || gamepad_gamekeypressed(key);
 }
+
+double swing(double x, double s) {
+	if(x <= 0.5) {
+		x *= 2;
+		return x * x * ((s + 1) * x - s) / 2;
+	}
+	
+	x--;
+	x *= 2;
+	
+	return x * x * ((s + 1) * x + s) / 2 + 1;
+}

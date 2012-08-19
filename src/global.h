@@ -52,6 +52,7 @@ enum {
 	POINT_OF_COLLECT = VIEWPORT_H/4,
 	ATTACK_START_DELAY = 40,
 	ATTACK_START_DELAY_EXTRA = 150,
+	ATTACK_END_DELAY_EXTRA = 150,
 	BOMB_RECOVERY = 300,
 	DEATHBOMB_TIME = 10,
 	DEATH_DELAY = 70,
@@ -120,6 +121,7 @@ typedef struct {
 	int replaymode;
 	
 	float shake_view;
+	float shake_view_fade;
 	
 	RandomState rand_game;
 	RandomState rand_visual;
@@ -154,6 +156,8 @@ int strendswith(char *s, char *e);
 char* difficulty_name(Difficulty diff);
 void stralloc(char **dest, char *src);
 int gamekeypressed(int key);
+
+double swing(double, double);
 
 #define SIGN(x) ((x > 0) - (x < 0))
 
