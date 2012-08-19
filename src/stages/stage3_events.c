@@ -458,7 +458,7 @@ int stage3_boss_a1_laserbullet(Projectile *p, int time) {
 			
 			for(i = 0; i < cnt; ++i) {
 				create_projectile2c("thickrice", p->pos, (i % 2)? rgb(1.0, 0.5, 0.5) : rgb(0.5, 0.5, 1.0), asymptotic,
-					(0.1 + frand()) * cexp(I*2*i*M_PI/cnt), 3
+					(0.1 + frand()) * cexp(I*(2*i*M_PI/cnt+time)), 3
 				)->draw = ProjDrawAdd;
 			}
 		}
@@ -503,6 +503,8 @@ int stage3_boss_a1_slave(Enemy *e, int time) {
 	if(!boss)
 		return ACTION_DESTROY;
 	
+	int extra = boss->current->type == AT_ExtraSpell;
+	
 	AT(EVENT_DEATH) {
 		free_ref(e->args[0]);
 		spawn_items(e->pos, 1, 1, 0, 0);
@@ -515,6 +517,16 @@ int stage3_boss_a1_slave(Enemy *e, int time) {
 		float c = 0.5 * psin(time / 25.0);
 		Projectile *p = create_projectile_p(&global.projs, prefix_get_tex("lasercurve", "part/"), e->pos, rgb(1.0 - c, 0.5, 0.5 + c), stage3_boss_a1_slave_part, timeout, 120, 0, 0, 0);
 		p->type = FairyProj;
+	}
+	
+	if(extra) {
+		if(global.diff > D_Easy && time > 300 && !(time % 20)) {
+			int d = max(1, global.diff - 2);
+			int i; for(i = -d; i < d; ++i)
+				create_projectile2c("wave", e->pos, rgb(0.3 + 0.7 * psin(time / 30.0), 1.0, 0.3), accelerated, dir*0.5, cexp(I*(0.05*i+carg(dir))) * 0.005)->draw = ProjDrawAdd;
+		}
+		
+		return 1;
 	}
 	
 	if(!creal(e->args[3]) && !(time % 140)) {
@@ -753,17 +765,56 @@ void stage3_boss_intro(Boss *boss, int time) {
 	GO_TO(boss, VIEWPORT_W/2.0 + 100I, 0.03);
 }
 
+void stage3_boss_extra(Boss *boss, int time) {
+	//int t = time % 700;
+	TIMER(&time);
+	
+	if(time < 0) {
+		GO_TO(boss, VIEWPORT_W/2.0+100I, 0.1);
+		return;
+	}
+	
+	AT(0) {
+		int i, j, cnt = 1 + global.diff;
+		for(j = -1; j < 2; j += 2) for(i = 0; i < cnt; ++i)
+			create_enemy3c(boss->pos, ENEMY_IMMUNE, Swirl, stage3_boss_a1_slave, add_ref(boss), i*2*M_PI/cnt, j);
+		return;
+	}
+	
+	int cnt = 7;
+	int step = 10;
+	
+	FROM_TO_INT(60, 900000000, 300, cnt*step, step) {
+		int i; for(i = 0; i < 2; ++i) {
+			double Oy = VIEWPORT_H*_ni/(double)cnt;
+			complex origin = VIEWPORT_W*i + Oy*I;
+			complex target = global.plr.pos;
+			
+			complex dist = target - origin;
+			complex accel = 0.05 * cexp(I*carg(dist));
+			float deathtime = sqrt(2*cabs(dist)/cabs(accel));
+			
+			float c = 0.8 * psin(_ni*2*M_PI/cnt);
+			Laser *l = create_lasercurve2c(origin, deathtime/3, deathtime, rgb(1 - c, 0.2, 0.2 + c), las_accel, 0, accel);
+			create_projectile3c("ball", origin, rgb(1.0, 0.5, 0.5), stage3_boss_a1_laserbullet, add_ref(l), deathtime - 1, 0)->draw = ProjDrawAdd;
+		}
+	}
+}
+
 Boss* stage3_create_boss(void) {
 	Boss *wriggle = create_boss("Wriggle EX", "wriggleex", VIEWPORT_W/2 - 200I);
 	boss_add_attack(wriggle, AT_Move, "Introduction", 2, 0, stage3_boss_intro, NULL);
 	
+	boss_add_attack(wriggle, AT_ExtraSpell, "Firefly Sign ~ Moonlight Wraith", 60, 150000, stage3_boss_extra, stage3_boss_spellbg);
+	
+	/*
 	boss_add_attack(wriggle, AT_Normal, "", 20, 15000, stage3_boss_prea1, NULL);
 	boss_add_attack(wriggle, AT_Spellcard, "Firefly Sign ~ Moonlight Rocket", 30, 20000, stage3_boss_a1, stage3_boss_spellbg);
 	boss_add_attack(wriggle, AT_Normal, "", 20, 15000, stage3_boss_prea2, NULL);
 	boss_add_attack(wriggle, AT_Spellcard, "Light Source ~ Wriggle Night Ignite", 25, 40000, stage3_boss_a2, stage3_boss_spellbg);
 	boss_add_attack(wriggle, AT_Normal, "", 20, 15000, stage3_boss_prea3, NULL);
 	boss_add_attack(wriggle, AT_Spellcard, "Bug Sign ~ Phosphaenus Hemipterus", 35, 30000, stage3_boss_a3, stage3_boss_spellbg);
-	
+	*/
 	start_attack(wriggle, wriggle->attacks);
 	return wriggle;
 }
@@ -771,8 +822,8 @@ Boss* stage3_create_boss(void) {
 void stage3_events(void) {
 	TIMER(&global.timer);
 	
-// 	AT(0)
-// 		global.timer = 4300;
+ 	AT(0)
+ 		global.timer = 5300;
 	
 	FROM_TO(160, 300, 10) {
 		tsrand_fill(3);

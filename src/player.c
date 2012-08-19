@@ -23,6 +23,8 @@ void init_player(Player* plr) {
 	
 	plr->deathtime = -1;
 	plr->continues = 0;
+	
+	plr->power = 4; // for extraspell testing
 }
 
 Animation *player_get_ani(Character cha) {
