@@ -71,7 +71,7 @@ void player_move(Player *plr, complex delta) {
 	
 	short xfac = fabs(creal(npos)) < fabs(creal(opos)) || fabs(creal(npos)) < VIEWPORT_W/2.0 - ani->w/2;
 	short yfac = fabs(cimag(npos)) < fabs(cimag(opos)) || fabs(cimag(npos)) < VIEWPORT_H/2.0 - ani->h/2;
-		
+	
 	plr->pos += (creal(delta)*xfac + cimag(delta)*yfac*I)*speed;
 }
 	
@@ -199,9 +199,11 @@ void player_realdeath(Player *plr) {
 	plr->deathtime = -DEATH_DELAY-1;
 	plr->respawntime = global.frames;
 	plr->moveflags = 0;
-		
-	create_item(plr->pos, 6-15*I, Power);
-	create_item(plr->pos, -6-15*I, Power);
+	
+	int drop = (plr->power / 3.0) / POWER_VALUE;
+	int i; for(i = 0; i < drop; ++i) 
+		create_item(plr->pos, (10+7*frand()) * cexp(I*(1.25*M_PI+0.5*i*M_PI/drop)), Power);
+	player_set_power(plr, plr->power / 2.0);
 	
 	plr->pos = VIEWPORT_W/2 + VIEWPORT_H*I+30I;
 	plr->recovery = -(global.frames + DEATH_DELAY + 150);
