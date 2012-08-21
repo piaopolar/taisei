@@ -172,9 +172,8 @@ void player_logic(Player* plr) {
 
 void player_bomb(Player *plr) {
 	if(global.frames - plr->recovery >= 0 && plr->bombs > 0 && global.frames - plr->respawntime >= 60) {
-		
 		delete_projectiles(&global.projs);
-				
+		
 		switch(plr->cha) {
 		case Marisa:
 			marisa_bomb(plr);
@@ -189,9 +188,10 @@ void player_bomb(Player *plr) {
 		if(plr->deathtime > 0) {
 			plr->deathtime = -1;
 			plr->bombs /= 2;
-		}			
+		}
 		
 		plr->recovery = global.frames + BOMB_RECOVERY;
+		player_set_power(plr, plr->power - 1);
 	}
 }
 
