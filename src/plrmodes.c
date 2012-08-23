@@ -18,7 +18,7 @@ int youmu_homing(Projectile *p, int t) { // a[0]: velocity, a[1]: target
 	if(t == EVENT_DEATH) {
 		return 1;
 	}
-		
+	
 	Enemy *target;
 	
 	if((target = REF(p->args[1]))) {
@@ -36,9 +36,8 @@ int youmu_homing(Projectile *p, int t) { // a[0]: velocity, a[1]: target
 	}
 	
 	p->angle = carg(p->args[0]);
-	
 	p->pos += p->args[0];
-		
+	
 	return 1;
 }
 
@@ -56,7 +55,7 @@ void Slice(Projectile *p, int t) {
 	glColor4f(1,1,1,1.0 - p->args[2]/p->args[0]*20.0);
 	
 	glPushMatrix();
-	glTranslatef(creal(p->pos), cimag(p->pos),0);
+	glTranslatef(creal(p->pos), cimag(p->pos), 0);
 	glRotatef(p->angle,0,0,1);
 	glScalef(f,1,1);
 	draw_texture(0,0,"part/youmu_slice");
@@ -127,43 +126,73 @@ void YoumuOppositeMyon(Enemy *e, int t) {
 	create_particle2c("flare", pos, NULL, Shrink, timeout, 10, -e->pos+10I);
 }
 
+complex youmu_enemy_ref(void) {
+	if(global.boss)
+		return add_ref(global.boss);
+	if(global.enemies)
+		return add_ref(global.enemies);
+	return add_ref(NULL);
+}
+
 int youmu_opposite_myon(Enemy *e, int t) {
 	if(t == EVENT_BIRTH)
 		e->pos = e->pos0 + global.plr.pos;
+	else if(t == EVENT_DEATH) {
+		free_ref(e->args[1]);
+		return 1;
+	}
+	
 	if(t < 0)
 		return 1;
 	
 	Player *plr = &global.plr;
+	int homing = plr->shot == YoumuHoming;
+	
 	float arg = carg(e->pos0);
 	float rad = cabs(e->pos0);
 	
-	if(plr->focus < 1) {
-		if(plr->moveflags && !creal(e->args[0]))
-			arg -= (carg(e->pos0)-carg(e->pos-plr->pos))*2;
+	if(homing) {
+		Enemy *target;
 		
-		//if(global.frames - plr->prevmovetime <= 10 && global.frames == plr->movetime) {
-		if(global.frames == plr->movetime) {
-			int new = plr->curmove;
-			int old = plr->prevmove;
+		if(!creal(e->args[1]))
+			e->args[1] = youmu_enemy_ref();
+		
+		if((target = REF(e->args[1]))) {
+			if(plr->focus < 1)
+				arg = carg(plr->pos - target->pos) + M_PI + 0.03 * sin(t/30.0);
+		} else {
+			free_ref(e->args[1]);
+			e->args[1] = youmu_enemy_ref();
+		}
+	} else {
+		if(plr->focus < 1) {
+			if(plr->moveflags && !creal(e->args[0]))
+				arg -= (carg(e->pos0)-carg(e->pos-plr->pos))*2;
 			
-			if(new == MOVEFLAG_UP && old == MOVEFLAG_DOWN) {
-				arg = M_PI/2;
-				e->args[0] = plr->movetime;
-			} else if(new == MOVEFLAG_DOWN && old == MOVEFLAG_UP) {
-				arg = 3*M_PI/2;
-				e->args[0] = plr->movetime;
-			} else if(new == MOVEFLAG_LEFT && old == MOVEFLAG_RIGHT) {
-				arg = 0;
-				e->args[0] = plr->movetime;
-			} else if(new == MOVEFLAG_RIGHT && old == MOVEFLAG_LEFT) {
-				arg = M_PI;
-				e->args[0] = plr->movetime;
+			//if(global.frames - plr->prevmovetime <= 10 && global.frames == plr->movetime) {
+			if(global.frames == plr->movetime) {
+				int new = plr->curmove;
+				int old = plr->prevmove;
+				
+				if(new == MOVEFLAG_UP && old == MOVEFLAG_DOWN) {
+					arg = M_PI/2;
+					e->args[0] = plr->movetime;
+				} else if(new == MOVEFLAG_DOWN && old == MOVEFLAG_UP) {
+					arg = 3*M_PI/2;
+					e->args[0] = plr->movetime;
+				} else if(new == MOVEFLAG_LEFT && old == MOVEFLAG_RIGHT) {
+					arg = 0;
+					e->args[0] = plr->movetime;
+				} else if(new == MOVEFLAG_RIGHT && old == MOVEFLAG_LEFT) {
+					arg = M_PI;
+					e->args[0] = plr->movetime;
+				}
 			}
 		}
+		
+		if(creal(e->args[0]) && plr->movetime != creal(e->args[0]))
+			e->args[0] = 0;
 	}
-	
-	if(creal(e->args[0]) && plr->movetime != creal(e->args[0]))
-		e->args[0] = 0;
 	
 	e->pos0 = rad * cexp(I*arg);
 	complex target = plr->pos + e->pos0;
@@ -226,7 +255,7 @@ void youmu_shot(Player *plr) {
 			create_projectile1c("youmu", plr->pos + 10 - I*20, NULL, linear, -20I)->type = PlrProj+120;
 			create_projectile1c("youmu", plr->pos - 10 - I*20, NULL, linear, -20I)->type = PlrProj+120;		
 		}
-		
+		/*
 		if(plr->shot == YoumuHoming) {
 			if(plr->focus && !(global.frames % 45)) {
 				int ref = -1;
@@ -246,9 +275,11 @@ void youmu_shot(Player *plr) {
 				create_projectile2c("hghost", plr->pos, NULL, accelerated, -2-10I, -0.4I)->type = PlrProj+27;
 			}
 		}
+		*/
 	}
 	
-	if(plr->shot == YoumuOpposite && plr->slaves == NULL)
+	//if(plr->shot == YoumuOpposite && plr->slaves == NULL)
+	if(!plr->slaves)
 		create_enemy_p(&plr->slaves, 40I, ENEMY_IMMUNE, YoumuOppositeMyon, youmu_opposite_myon, 0, 0, 0, 0);
 }
 
@@ -265,7 +296,8 @@ void youmu_bomb(Player *plr) {
 }
 
 void youmu_power(Player *plr, float npow) {
-	if(plr->shot == YoumuOpposite && plr->slaves == NULL)
+	//if(plr->shot == YoumuOpposite && plr->slaves == NULL)
+	if(!plr->slaves)
 		create_enemy_p(&plr->slaves, 40I, ENEMY_IMMUNE, YoumuOppositeMyon, youmu_opposite_myon, 0, 0, 0, 0);
 }
 

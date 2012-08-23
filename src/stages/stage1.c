@@ -347,6 +347,7 @@ void cirno_icicle_fall(Boss *c, int time) {
 
 Boss *create_cirno(void) {
 	Boss* cirno = create_boss("Cirno", "cirno", -230 + 100I);
+	
 	boss_add_attack(cirno, AT_Move, "Introduction", 2, 0, cirno_intro_boss, NULL);
 	boss_add_attack(cirno, AT_Normal, "Iceplosion 0", 20, 20000, cirno_iceplosion0, NULL);
 	boss_add_attack(cirno, AT_Spellcard, "Freeze Sign ~ Crystal Rain", 28, 28000, cirno_crystal_rain, cirno_pfreeze_bg);
